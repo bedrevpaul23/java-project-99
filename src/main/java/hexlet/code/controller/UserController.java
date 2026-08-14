@@ -5,6 +5,7 @@ import hexlet.code.dto.UserDTO;
 import hexlet.code.dto.UserUpdateDTO;
 import hexlet.code.service.UserService;
 import jakarta.validation.Valid;
+import java.security.Principal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,13 +43,14 @@ public class UserController {
   }
 
   @PutMapping("/{id}")
-  public UserDTO update(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO dto) {
-    return userService.update(id, dto);
+  public UserDTO update(
+      @PathVariable Long id, @Valid @RequestBody UserUpdateDTO dto, Principal principal) {
+    return userService.update(id, dto, principal.getName());
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable Long id) {
-    userService.delete(id);
+  public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
+    userService.delete(id, principal.getName());
     return ResponseEntity.noContent().build();
   }
 }

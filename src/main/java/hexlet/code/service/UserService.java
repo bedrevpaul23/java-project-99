@@ -8,6 +8,8 @@ import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
 import java.util.List;
+import java.util.Objects;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +45,9 @@ public class UserService {
   }
 
   @Transactional
-  public UserDTO update(Long id, UserUpdateDTO dto) {
+  public UserDTO update(Long id, UserUpdateDTO dto, String authenticatedEmail) {
     var user = findById(id);
+    checkOwnership(user, authenticatedEmail);
     userMapper.update(dto, user);
     if (dto.getPassword().isPresent()) {
       user.setPasswordDigest(passwordEncoder.encode(dto.getPassword().get()));
@@ -53,13 +56,21 @@ public class UserService {
   }
 
   @Transactional
-  public void delete(Long id) {
-    userRepository.delete(findById(id));
+  public void delete(Long id, String authenticatedEmail) {
+    var user = findById(id);
+    checkOwnership(user, authenticatedEmail);
+    userRepository.delete(user);
   }
 
   private User findById(Long id) {
     return userRepository
         .findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+  }
+
+  private void checkOwnership(User user, String authenticatedEmail) {
+    if (!Objects.equals(user.getEmail(), authenticatedEmail)) {
+      throw new AccessDeniedException("Access denied");
+    }
   }
 }
