@@ -22,7 +22,7 @@ public class User {
   private String firstName;
   private String lastName;
   private String email;
-  private String password;
+  private String passwordDigest;
 
   @CreatedDate private LocalDate createdAt;
 
@@ -60,12 +60,12 @@ public class User {
     this.email = email;
   }
 
-  public String getPassword() {
-    return password;
+  public String getPasswordDigest() {
+    return passwordDigest;
   }
 
-  public void setPassword(String password) {
-    this.password = password;
+  public void setPasswordDigest(String passwordDigest) {
+    this.passwordDigest = passwordDigest;
   }
 
   public LocalDate getCreatedAt() {

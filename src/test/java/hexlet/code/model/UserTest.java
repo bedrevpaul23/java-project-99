@@ -19,7 +19,7 @@ class UserTest {
     user.setFirstName("John");
     user.setLastName("Doe");
     user.setEmail("john.doe@example.com");
-    user.setPassword("password");
+    user.setPasswordDigest("password-digest");
 
     var persistedUser = entityManager.persistAndFlush(user);
 
