@@ -28,8 +28,9 @@ public class UserController {
   }
 
   @GetMapping
-  public List<UserDTO> index() {
-    return userService.getAll();
+  public ResponseEntity<List<UserDTO>> index() {
+    var users = userService.getAll();
+    return ResponseEntity.ok().header("X-Total-Count", String.valueOf(users.size())).body(users);
   }
 
   @GetMapping("/{id}")

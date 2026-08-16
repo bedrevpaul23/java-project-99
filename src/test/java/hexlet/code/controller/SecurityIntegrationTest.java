@@ -1,11 +1,13 @@
 package hexlet.code.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,10 +43,13 @@ class SecurityIntegrationTest {
 
   @Test
   void keepsRootAndWelcomePublic() throws Exception {
+    mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(forwardedUrl("index.html"));
+
     mockMvc
-        .perform(get("/"))
+        .perform(get("/index.html"))
         .andExpect(status().isOk())
-        .andExpect(content().string("Welcome to Spring"));
+        .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+        .andExpect(content().string(containsString("<div id=\"root\"></div>")));
 
     mockMvc
         .perform(get("/welcome"))
