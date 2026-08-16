@@ -2,6 +2,7 @@ package hexlet.code.service;
 
 import hexlet.code.dto.TaskCreateDTO;
 import hexlet.code.dto.TaskDTO;
+import hexlet.code.dto.TaskParamsDTO;
 import hexlet.code.dto.TaskUpdateDTO;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskMapper;
@@ -13,6 +14,7 @@ import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
+import hexlet.code.specification.TaskSpecification;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,23 +28,27 @@ public class TaskService {
   private final UserRepository userRepository;
   private final LabelRepository labelRepository;
   private final TaskMapper taskMapper;
+  private final TaskSpecification taskSpecification;
 
   public TaskService(
       TaskRepository taskRepository,
       TaskStatusRepository taskStatusRepository,
       UserRepository userRepository,
       LabelRepository labelRepository,
-      TaskMapper taskMapper) {
+      TaskMapper taskMapper,
+      TaskSpecification taskSpecification) {
     this.taskRepository = taskRepository;
     this.taskStatusRepository = taskStatusRepository;
     this.userRepository = userRepository;
     this.labelRepository = labelRepository;
     this.taskMapper = taskMapper;
+    this.taskSpecification = taskSpecification;
   }
 
   @Transactional(readOnly = true)
-  public List<TaskDTO> getAll() {
-    return taskRepository.findAll().stream().map(taskMapper::map).toList();
+  public List<TaskDTO> getAll(TaskParamsDTO params) {
+    var specification = taskSpecification.build(params);
+    return taskRepository.findAll(specification).stream().map(taskMapper::map).toList();
   }
 
   @Transactional(readOnly = true)

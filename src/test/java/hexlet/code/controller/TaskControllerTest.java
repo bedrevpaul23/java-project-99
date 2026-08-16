@@ -1,6 +1,7 @@
 package hexlet.code.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -68,6 +69,213 @@ class TaskControllerTest {
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(header().string("X-Total-Count", String.valueOf(expectedCount)))
         .andExpect(jsonPath("$.length()").value(expectedCount));
+  }
+
+  @Test
+  void filtersTasksByTitleCont() throws Exception {
+    var task = saveTask("Create new version " + UUID.randomUUID(), getStatus("draft"), null);
+    saveTask("Unrelated title " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("titleCont", "create"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(task.getId().intValue())));
+  }
+
+  @Test
+  void filtersTasksByTitleContSubstring() throws Exception {
+    var task = saveTask("Create new version " + UUID.randomUUID(), getStatus("draft"), null);
+    saveTask("Unrelated title " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("titleCont", "new"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(task.getId().intValue())));
+  }
+
+  @Test
+  void filtersTasksByTitleContCaseInsensitively() throws Exception {
+    var task = saveTask("Create New Version " + UUID.randomUUID(), getStatus("draft"), null);
+    saveTask("Unrelated title " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("titleCont", "create"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(task.getId().intValue())));
+  }
+
+  @Test
+  void returnsNoTasksForNonMatchingTitleCont() throws Exception {
+    saveTask("Unrelated task " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("titleCont", "missing-" + UUID.randomUUID()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  void filtersTasksByAssigneeId() throws Exception {
+    var matchingAssignee = saveUser("filter-a-" + UUID.randomUUID() + "@example.com");
+    var otherAssignee = saveUser("filter-b-" + UUID.randomUUID() + "@example.com");
+    var matching =
+        saveTask("Assignee match " + UUID.randomUUID(), getStatus("draft"), matchingAssignee);
+    saveTask("Assignee other " + UUID.randomUUID(), getStatus("draft"), otherAssignee);
+
+    mockMvc
+        .perform(get(BASE_URL).param("assigneeId", matchingAssignee.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
+  }
+
+  @Test
+  void filtersTasksByStatusSlug() throws Exception {
+    var matchingStatus = getStatus("filter-status-" + UUID.randomUUID());
+    var otherStatus = getStatus("filter-other-status-" + UUID.randomUUID());
+    var matching = saveTask("Status match " + UUID.randomUUID(), matchingStatus, null);
+    saveTask("Status other " + UUID.randomUUID(), otherStatus, null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("status", matchingStatus.getSlug()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
+  }
+
+  @Test
+  void filtersTasksByLabelId() throws Exception {
+    var matchingLabel = saveLabel("Filter label " + UUID.randomUUID());
+    var otherLabel = saveLabel("Other filter label " + UUID.randomUUID());
+    var matching = saveTask("Label match " + UUID.randomUUID(), getStatus("draft"), null);
+    matching.setLabels(Set.of(matchingLabel));
+    taskRepository.saveAndFlush(matching);
+    var other = saveTask("Label other " + UUID.randomUUID(), getStatus("draft"), null);
+    other.setLabels(Set.of(otherLabel));
+    taskRepository.saveAndFlush(other);
+
+    mockMvc
+        .perform(get(BASE_URL).param("labelId", matchingLabel.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
+  }
+
+  @Test
+  void returnsTaskOnceWhenFilteringByOneOfMultipleLabels() throws Exception {
+    var firstLabel = saveLabel("First filter label " + UUID.randomUUID());
+    var secondLabel = saveLabel("Second filter label " + UUID.randomUUID());
+    var task = saveTask("Multiple labels " + UUID.randomUUID(), getStatus("draft"), null);
+    task.setLabels(Set.of(firstLabel, secondLabel));
+    taskRepository.saveAndFlush(task);
+    saveTask("Without labels " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("labelId", firstLabel.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(task.getId()));
+  }
+
+  @Test
+  void combinesAllTaskFiltersWithAnd() throws Exception {
+    var assignee = saveUser("combined-" + UUID.randomUUID() + "@example.com");
+    var label = saveLabel("Combined label " + UUID.randomUUID());
+    var matchingStatus = getStatus("combined-status-" + UUID.randomUUID());
+    var otherStatus = getStatus("combined-other-status-" + UUID.randomUUID());
+    var matching = saveTask("Create combined " + UUID.randomUUID(), matchingStatus, assignee);
+    matching.setLabels(Set.of(label));
+    taskRepository.saveAndFlush(matching);
+    var wrongStatus = saveTask("Create combined " + UUID.randomUUID(), otherStatus, assignee);
+    wrongStatus.setLabels(Set.of(label));
+    taskRepository.saveAndFlush(wrongStatus);
+
+    mockMvc
+        .perform(
+            get(BASE_URL)
+                .param("titleCont", "create combined")
+                .param("assigneeId", assignee.getId().toString())
+                .param("status", matchingStatus.getSlug())
+                .param("labelId", label.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
+  }
+
+  @Test
+  void returnsNoTasksWhenOneCombinedFilterDoesNotMatch() throws Exception {
+    var assignee = saveUser("combined-miss-" + UUID.randomUUID() + "@example.com");
+    var label = saveLabel("Combined miss label " + UUID.randomUUID());
+    var task = saveTask("Create mismatch " + UUID.randomUUID(), getStatus("draft"), assignee);
+    task.setLabels(Set.of(label));
+    taskRepository.saveAndFlush(task);
+
+    mockMvc
+        .perform(
+            get(BASE_URL)
+                .param("titleCont", "create mismatch")
+                .param("assigneeId", assignee.getId().toString())
+                .param("status", "missing-status-" + UUID.randomUUID())
+                .param("labelId", label.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  void returnsNoTasksForUnknownFilterReferences() throws Exception {
+    var unknownId = Long.MAX_VALUE;
+    saveTask("Known task " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("assigneeId", Long.toString(unknownId)))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$").isEmpty());
+    mockMvc
+        .perform(get(BASE_URL).param("labelId", Long.toString(unknownId)))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$").isEmpty());
+    mockMvc
+        .perform(get(BASE_URL).param("status", "missing-status-" + UUID.randomUUID()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  void reportsFilteredTaskCount() throws Exception {
+    var suffix = UUID.randomUUID().toString();
+    var matching = saveTask("Count matching " + suffix, getStatus("draft"), null);
+    saveTask("Count other " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(get(BASE_URL).param("titleCont", suffix))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
+  }
+
+  @Test
+  void ignoresTechnicalFrontendQueryParamsWhileFiltering() throws Exception {
+    var suffix = UUID.randomUUID().toString();
+    var matching = saveTask("Create technical " + suffix, getStatus("draft"), null);
+    saveTask("Other technical " + UUID.randomUUID(), getStatus("draft"), null);
+
+    mockMvc
+        .perform(
+            get(BASE_URL)
+                .param("_start", "0")
+                .param("_end", "100")
+                .param("_sort", "index")
+                .param("_order", "ASC")
+                .param("titleCont", suffix))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
+        .andExpect(jsonPath("$[*].id", containsInAnyOrder(matching.getId().intValue())));
   }
 
   @Test
