@@ -2,6 +2,7 @@ package hexlet.code.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
+import java.util.List;
 
 public class TaskDTO {
   private Long id;
@@ -14,6 +15,7 @@ public class TaskDTO {
   private String title;
   private String content;
   private String status;
+  private List<Long> taskLabelIds;
 
   public Long getId() {
     return id;
@@ -69,5 +71,13 @@ public class TaskDTO {
 
   public void setStatus(String status) {
     this.status = status;
+  }
+
+  public List<Long> getTaskLabelIds() {
+    return taskLabelIds;
+  }
+
+  public void setTaskLabelIds(List<Long> taskLabelIds) {
+    this.taskLabelIds = taskLabelIds;
   }
 }

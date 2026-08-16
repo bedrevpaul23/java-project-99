@@ -12,14 +12,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,7 @@ class TaskControllerTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TaskRepository taskRepository;
+  @Autowired private LabelRepository labelRepository;
   @Autowired private TaskStatusRepository taskStatusRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private PasswordEncoder passwordEncoder;
@@ -417,6 +422,149 @@ class TaskControllerTest {
                 assertThat(persisted.getTaskStatus().getId()).isEqualTo(taskStatus.getId()));
   }
 
+  @Test
+  void createsTasksWithLabelsAndPersistsAssociations() throws Exception {
+    var first = saveLabel("First " + UUID.randomUUID());
+    var second = saveLabel("Second " + UUID.randomUUID());
+    var result =
+        mockMvc
+            .perform(
+                post(BASE_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            Map.of(
+                                "title", "Label task",
+                                "status", "draft",
+                                "taskLabelIds",
+                                    List.of(first.getId(), second.getId(), first.getId())))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.taskLabelIds").isArray())
+            .andExpect(
+                jsonPath("$.taskLabelIds")
+                    .value(
+                        org.hamcrest.Matchers.containsInAnyOrder(
+                            first.getId().intValue(), second.getId().intValue())))
+            .andReturn();
+
+    var taskId =
+        objectMapper.readTree(result.getResponse().getContentAsString()).get("id").longValue();
+    entityManager.flush();
+    entityManager.clear();
+    assertThat(taskRepository.findById(taskId).orElseThrow().getLabels())
+        .extracting(Label::getId)
+        .containsExactlyInAnyOrder(first.getId(), second.getId());
+  }
+
+  @Test
+  void createsTasksWithoutLabelsWhenIdsAreOmittedOrEmpty() throws Exception {
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"No labels\",\"status\":\"draft\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.taskLabelIds").isEmpty());
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Empty labels\",\"status\":\"draft\",\"taskLabelIds\":[]}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.taskLabelIds").isEmpty());
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Null labels\",\"status\":\"draft\",\"taskLabelIds\":null}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.taskLabelIds").isEmpty());
+  }
+
+  @Test
+  void createsTaskWithOneLabel() throws Exception {
+    var label = saveLabel("One " + UUID.randomUUID());
+
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"One label task\",\"status\":\"draft\",\"taskLabelIds\":["
+                        + label.getId()
+                        + "]}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.taskLabelIds[0]").value(label.getId()));
+  }
+
+  @Test
+  void updatesTaskLabelsAndPreservesThemWhenOmitted() throws Exception {
+    var first = saveLabel("First " + UUID.randomUUID());
+    var second = saveLabel("Second " + UUID.randomUUID());
+    var task = saveTask("Update labels", getStatus("draft"), null);
+    task.setLabels(Set.of(first));
+    taskRepository.saveAndFlush(task);
+
+    mockMvc
+        .perform(
+            put(BASE_URL + "/{id}", task.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Still labels\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.taskLabelIds[0]").value(first.getId()));
+    mockMvc
+        .perform(
+            put(BASE_URL + "/{id}", task.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"taskLabelIds\":[" + second.getId() + "]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.taskLabelIds[0]").value(second.getId()));
+    mockMvc
+        .perform(
+            put(BASE_URL + "/{id}", task.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"taskLabelIds\":[]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.taskLabelIds").isEmpty());
+    mockMvc
+        .perform(
+            put(BASE_URL + "/{id}", task.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"taskLabelIds\":null}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.taskLabelIds").isEmpty());
+  }
+
+  @Test
+  void returnsNotFoundForUnknownLabelAndProtectsLinkedLabel() throws Exception {
+    var label = saveLabel("Linked " + UUID.randomUUID());
+    var task = saveTask("Linked label task", getStatus("draft"), null);
+    task.setLabels(Set.of(label));
+    taskRepository.saveAndFlush(task);
+
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"Missing label\",\"status\":\"draft\",\"taskLabelIds\":["
+                        + Long.MAX_VALUE
+                        + "]}"))
+        .andExpect(status().isNotFound());
+    mockMvc
+        .perform(
+            put(BASE_URL + "/{id}", task.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"taskLabelIds\":[" + Long.MAX_VALUE + "]}"))
+        .andExpect(status().isNotFound());
+    mockMvc.perform(delete("/api/labels/{id}", label.getId())).andExpect(status().isBadRequest());
+
+    assertThat(labelRepository.existsById(label.getId())).isTrue();
+    assertThat(taskRepository.findById(task.getId()).orElseThrow().getLabels())
+        .extracting(Label::getId)
+        .containsExactly(label.getId());
+  }
+
   private TaskStatus getStatus(String slug) {
     return taskStatusRepository
         .findBySlug(slug)
@@ -444,6 +592,12 @@ class TaskControllerTest {
     task.setTaskStatus(taskStatus);
     task.setAssignee(assignee);
     return taskRepository.saveAndFlush(task);
+  }
+
+  private Label saveLabel(String name) {
+    var label = new Label();
+    label.setName(name);
+    return labelRepository.saveAndFlush(label);
   }
 
   private void assertBadPost(String body) throws Exception {

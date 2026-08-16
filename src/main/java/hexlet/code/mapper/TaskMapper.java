@@ -17,6 +17,7 @@ public class TaskMapper {
     dto.setTitle(task.getName());
     dto.setContent(task.getDescription());
     dto.setStatus(task.getTaskStatus().getSlug());
+    dto.setTaskLabelIds(task.getLabels().stream().map(label -> label.getId()).toList());
     return dto;
   }
 
