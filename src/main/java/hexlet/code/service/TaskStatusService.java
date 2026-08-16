@@ -4,9 +4,11 @@ import hexlet.code.dto.TaskStatusCreateDTO;
 import hexlet.code.dto.TaskStatusDTO;
 import hexlet.code.dto.TaskStatusUpdateDTO;
 import hexlet.code.exception.DuplicateResourceException;
+import hexlet.code.exception.ResourceInUseException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskStatusMapper;
 import hexlet.code.model.TaskStatus;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import java.util.List;
 import java.util.Objects;
@@ -16,11 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TaskStatusService {
   private final TaskStatusRepository taskStatusRepository;
+  private final TaskRepository taskRepository;
   private final TaskStatusMapper taskStatusMapper;
 
   public TaskStatusService(
-      TaskStatusRepository taskStatusRepository, TaskStatusMapper taskStatusMapper) {
+      TaskStatusRepository taskStatusRepository,
+      TaskRepository taskRepository,
+      TaskStatusMapper taskStatusMapper) {
     this.taskStatusRepository = taskStatusRepository;
+    this.taskRepository = taskRepository;
     this.taskStatusMapper = taskStatusMapper;
   }
 
@@ -56,7 +62,11 @@ public class TaskStatusService {
 
   @Transactional
   public void delete(Long id) {
-    taskStatusRepository.delete(findById(id));
+    var taskStatus = findById(id);
+    if (taskRepository.existsByTaskStatusId(id)) {
+      throw new ResourceInUseException("Task status is used by a task: " + id);
+    }
+    taskStatusRepository.delete(taskStatus);
   }
 
   private TaskStatus findById(Long id) {

@@ -3,9 +3,11 @@ package hexlet.code.service;
 import hexlet.code.dto.UserCreateDTO;
 import hexlet.code.dto.UserDTO;
 import hexlet.code.dto.UserUpdateDTO;
+import hexlet.code.exception.ResourceInUseException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.User;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.UserRepository;
 import java.util.List;
 import java.util.Objects;
@@ -17,12 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
   private final UserRepository userRepository;
+  private final TaskRepository taskRepository;
   private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
 
   public UserService(
-      UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+      UserRepository userRepository,
+      TaskRepository taskRepository,
+      UserMapper userMapper,
+      PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
+    this.taskRepository = taskRepository;
     this.userMapper = userMapper;
     this.passwordEncoder = passwordEncoder;
   }
@@ -59,6 +66,9 @@ public class UserService {
   public void delete(Long id, String authenticatedEmail) {
     var user = findById(id);
     checkOwnership(user, authenticatedEmail);
+    if (taskRepository.existsByAssigneeId(id)) {
+      throw new ResourceInUseException("User is assigned to a task: " + id);
+    }
     userRepository.delete(user);
   }
 
