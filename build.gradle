@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '3.4.5'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '7.0.2'
+    id 'io.sentry.jvm.gradle' version '6.19.0'
 }
 
 group = 'hexlet.code'
@@ -40,5 +41,21 @@ tasks.named('test') {
 spotless {
     java {
         googleJavaFormat()
+    }
+}
+
+sentry {
+    includeSourceContext = true
+    authToken = System.getenv('SENTRY_AUTH_TOKEN')
+    org = System.getenv('SENTRY_ORG')
+    projectName = System.getenv('SENTRY_PROJECT')
+}
+
+def sentrySourceUploadCredentialsPresent =
+        ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT'].every { System.getenv(it) }
+
+['sentryBundleSourcesJava', 'sentryUploadSourceBundleJava'].each { taskName ->
+    tasks.named(taskName) {
+        onlyIf { sentrySourceUploadCredentialsPresent }
     }
 }
