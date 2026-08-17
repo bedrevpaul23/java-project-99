@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import hexlet.code.component.DataInitializer;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.repository.TaskStatusRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,19 +27,18 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @WithMockUser
-class TaskStatusControllerTest {
+class TaskStatusControllerTest extends IntegrationTestSupport {
   private static final String BASE_URL = "/api/task_statuses";
 
   @Autowired private MockMvc mockMvc;
   @Autowired private TaskStatusRepository taskStatusRepository;
-  @Autowired private DataInitializer dataInitializer;
 
   @BeforeEach
   void resetTaskStatuses() throws Exception {
-    taskStatusRepository.deleteAll();
-    dataInitializer.run(new DefaultApplicationArguments(new String[0]));
+    clearDatabase();
+    initializeDefaults();
   }
 
   @Test

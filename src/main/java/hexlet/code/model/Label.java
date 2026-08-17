@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import org.hibernate.Hibernate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -46,5 +47,22 @@ public class Label {
 
   public void setCreatedAt(LocalDate createdAt) {
     this.createdAt = createdAt;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) {
+      return false;
+    }
+    var label = (Label) other;
+    return getId() != null && getId().equals(label.getId());
+  }
+
+  @Override
+  public int hashCode() {
+    return Hibernate.getClass(this).hashCode();
   }
 }

@@ -1,5 +1,6 @@
 package hexlet.code.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
@@ -7,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import org.hibernate.Hibernate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -21,7 +23,10 @@ public class User {
 
   private String firstName;
   private String lastName;
+
+  @Column(nullable = false, unique = true)
   private String email;
+
   private String passwordDigest;
 
   @CreatedDate private LocalDate createdAt;
@@ -82,5 +87,22 @@ public class User {
 
   public void setUpdatedAt(LocalDate updatedAt) {
     this.updatedAt = updatedAt;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) {
+      return false;
+    }
+    var user = (User) other;
+    return getId() != null && getId().equals(user.getId());
+  }
+
+  @Override
+  public int hashCode() {
+    return Hibernate.getClass(this).hashCode();
   }
 }

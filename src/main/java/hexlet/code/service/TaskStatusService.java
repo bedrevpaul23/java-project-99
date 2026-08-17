@@ -3,95 +3,16 @@ package hexlet.code.service;
 import hexlet.code.dto.TaskStatusCreateDTO;
 import hexlet.code.dto.TaskStatusDTO;
 import hexlet.code.dto.TaskStatusUpdateDTO;
-import hexlet.code.exception.DuplicateResourceException;
-import hexlet.code.exception.ResourceInUseException;
-import hexlet.code.exception.ResourceNotFoundException;
-import hexlet.code.mapper.TaskStatusMapper;
-import hexlet.code.model.TaskStatus;
-import hexlet.code.repository.TaskRepository;
-import hexlet.code.repository.TaskStatusRepository;
 import java.util.List;
-import java.util.Objects;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class TaskStatusService {
-  private final TaskStatusRepository taskStatusRepository;
-  private final TaskRepository taskRepository;
-  private final TaskStatusMapper taskStatusMapper;
+public interface TaskStatusService {
+  List<TaskStatusDTO> getAll();
 
-  public TaskStatusService(
-      TaskStatusRepository taskStatusRepository,
-      TaskRepository taskRepository,
-      TaskStatusMapper taskStatusMapper) {
-    this.taskStatusRepository = taskStatusRepository;
-    this.taskRepository = taskRepository;
-    this.taskStatusMapper = taskStatusMapper;
-  }
+  TaskStatusDTO getById(Long id);
 
-  @Transactional(readOnly = true)
-  public List<TaskStatusDTO> getAll() {
-    return taskStatusRepository.findAll().stream().map(taskStatusMapper::map).toList();
-  }
+  TaskStatusDTO create(TaskStatusCreateDTO dto);
 
-  @Transactional(readOnly = true)
-  public TaskStatusDTO getById(Long id) {
-    return taskStatusMapper.map(findById(id));
-  }
+  TaskStatusDTO update(Long id, TaskStatusUpdateDTO dto);
 
-  @Transactional
-  public TaskStatusDTO create(TaskStatusCreateDTO dto) {
-    checkNameAvailable(dto.getName(), null);
-    checkSlugAvailable(dto.getSlug(), null);
-    return taskStatusMapper.map(taskStatusRepository.save(taskStatusMapper.map(dto)));
-  }
-
-  @Transactional
-  public TaskStatusDTO update(Long id, TaskStatusUpdateDTO dto) {
-    var taskStatus = findById(id);
-    if (dto.getName().isPresent()) {
-      checkNameAvailable(dto.getName().get(), taskStatus.getId());
-    }
-    if (dto.getSlug().isPresent()) {
-      checkSlugAvailable(dto.getSlug().get(), taskStatus.getId());
-    }
-    taskStatusMapper.update(dto, taskStatus);
-    return taskStatusMapper.map(taskStatusRepository.save(taskStatus));
-  }
-
-  @Transactional
-  public void delete(Long id) {
-    var taskStatus = findById(id);
-    if (taskRepository.existsByTaskStatusId(id)) {
-      throw new ResourceInUseException("Task status is used by a task: " + id);
-    }
-    taskStatusRepository.delete(taskStatus);
-  }
-
-  private TaskStatus findById(Long id) {
-    return taskStatusRepository
-        .findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException("Task status not found: " + id));
-  }
-
-  private void checkNameAvailable(String name, Long currentId) {
-    taskStatusRepository
-        .findByName(name)
-        .filter(taskStatus -> !Objects.equals(taskStatus.getId(), currentId))
-        .ifPresent(
-            taskStatus -> {
-              throw new DuplicateResourceException("Task status name already exists: " + name);
-            });
-  }
-
-  private void checkSlugAvailable(String slug, Long currentId) {
-    taskStatusRepository
-        .findBySlug(slug)
-        .filter(taskStatus -> !Objects.equals(taskStatus.getId(), currentId))
-        .ifPresent(
-            taskStatus -> {
-              throw new DuplicateResourceException("Task status slug already exists: " + slug);
-            });
-  }
+  void delete(Long id);
 }

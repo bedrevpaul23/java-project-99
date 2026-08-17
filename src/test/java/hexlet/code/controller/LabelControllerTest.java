@@ -11,11 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hexlet.code.component.DataInitializer;
 import hexlet.code.model.Label;
 import hexlet.code.repository.LabelRepository;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
@@ -26,20 +26,22 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @WithMockUser
-@Transactional
-class LabelControllerTest {
+class LabelControllerTest extends IntegrationTestSupport {
   private static final String BASE_URL = "/api/labels";
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private LabelRepository labelRepository;
-  @Autowired private DataInitializer dataInitializer;
+
+  @BeforeEach
+  void resetDatabase() {
+    clearDatabase();
+  }
 
   @Test
   void listsLabelsWithTotalCount() throws Exception {

@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+import org.hibernate.Hibernate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -112,5 +113,22 @@ public class Task {
 
   public void setCreatedAt(LocalDate createdAt) {
     this.createdAt = createdAt;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) {
+      return false;
+    }
+    var task = (Task) other;
+    return getId() != null && getId().equals(task.getId());
+  }
+
+  @Override
+  public int hashCode() {
+    return Hibernate.getClass(this).hashCode();
   }
 }

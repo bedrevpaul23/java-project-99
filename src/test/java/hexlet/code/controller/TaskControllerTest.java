@@ -21,11 +21,11 @@ import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,14 +36,12 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @WithMockUser(username = "task-owner@example.com")
-@Transactional
-class TaskControllerTest {
+class TaskControllerTest extends IntegrationTestSupport {
   private static final String BASE_URL = "/api/tasks";
   private static final String OWNER_EMAIL = "task-owner@example.com";
 
@@ -54,7 +52,12 @@ class TaskControllerTest {
   @Autowired private TaskStatusRepository taskStatusRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private PasswordEncoder passwordEncoder;
-  @Autowired private EntityManager entityManager;
+
+  @BeforeEach
+  void resetDatabase() throws Exception {
+    clearDatabase();
+    initializeDefaults();
+  }
 
   @Test
   void listsTasksWithTotalCount() throws Exception {
@@ -340,8 +343,6 @@ class TaskControllerTest {
 
     var taskId =
         objectMapper.readTree(result.getResponse().getContentAsString()).get("id").longValue();
-    entityManager.flush();
-    entityManager.clear();
 
     var persisted = taskRepository.findById(taskId).orElseThrow();
     assertThat(persisted.getName()).isEqualTo("Full task");
@@ -398,8 +399,6 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.assignee_id").value(assignee.getId()))
         .andExpect(jsonPath("$.status").value("draft"));
 
-    entityManager.flush();
-    entityManager.clear();
     var updated = taskRepository.findById(task.getId()).orElseThrow();
     assertThat(updated.getName()).isEqualTo("New title");
     assertThat(updated.getDescription()).isEqualTo("New content");
@@ -418,8 +417,6 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.title").value("Status task"))
         .andExpect(jsonPath("$.status").value("to_be_fixed"));
 
-    entityManager.flush();
-    entityManager.clear();
     var updated = taskRepository.findById(task.getId()).orElseThrow();
     assertThat(updated.getTaskStatus().getSlug()).isEqualTo("to_be_fixed");
   }
@@ -440,8 +437,6 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.title").value("Indexed task"))
         .andExpect(jsonPath("$.status").value("draft"));
 
-    entityManager.flush();
-    entityManager.clear();
     assertThat(taskRepository.findById(task.getId()).orElseThrow().getIndex()).isEqualTo(99);
   }
 
@@ -460,8 +455,6 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.title").value("Assignment task"))
         .andExpect(jsonPath("$.status").value("draft"));
 
-    entityManager.flush();
-    entityManager.clear();
     assertThat(taskRepository.findById(task.getId()).orElseThrow().getAssignee().getId())
         .isEqualTo(assignee.getId());
   }
@@ -486,8 +479,6 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.title").value("Clear task"))
         .andExpect(jsonPath("$.status").value("draft"));
 
-    entityManager.flush();
-    entityManager.clear();
     var updated = taskRepository.findById(task.getId()).orElseThrow();
     assertThat(updated.getIndex()).isNull();
     assertThat(updated.getDescription()).isNull();
@@ -657,8 +648,6 @@ class TaskControllerTest {
 
     var taskId =
         objectMapper.readTree(result.getResponse().getContentAsString()).get("id").longValue();
-    entityManager.flush();
-    entityManager.clear();
     assertThat(taskRepository.findById(taskId).orElseThrow().getLabels())
         .extracting(Label::getId)
         .containsExactlyInAnyOrder(first.getId(), second.getId());

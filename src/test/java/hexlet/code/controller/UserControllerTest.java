@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hexlet.code.component.DataInitializer;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
 import java.util.Map;
@@ -29,18 +28,17 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @WithMockUser(username = "jack@google.com")
-class UserControllerTest {
+class UserControllerTest extends IntegrationTestSupport {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private UserRepository userRepository;
   @Autowired private PasswordEncoder passwordEncoder;
-  @Autowired private DataInitializer dataInitializer;
 
   @BeforeEach
   void cleanDatabase() {
-    userRepository.deleteAll();
+    clearDatabase();
   }
 
   @Test
@@ -106,6 +104,20 @@ class UserControllerTest {
     assertThat(persistedUser.getPasswordDigest()).isNotEqualTo("some-password");
     assertThat(passwordEncoder.matches("some-password", persistedUser.getPasswordDigest()))
         .isTrue();
+  }
+
+  @Test
+  void rejectsDuplicateEmail() throws Exception {
+    saveUser("jack@google.com", "Jack", "Jons", "secret");
+
+    mockMvc
+        .perform(
+            post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"jack@google.com\",\"password\":\"another-secret\"}"))
+        .andExpect(status().isBadRequest());
+
+    assertThat(userRepository.findAll()).hasSize(1);
   }
 
   @Test

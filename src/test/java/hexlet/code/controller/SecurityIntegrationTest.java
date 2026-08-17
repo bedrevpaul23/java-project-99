@@ -11,13 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import hexlet.code.component.DataInitializer;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
@@ -28,17 +26,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("dev")
-class SecurityIntegrationTest {
+@ActiveProfiles("test")
+class SecurityIntegrationTest extends IntegrationTestSupport {
   @Autowired private MockMvc mockMvc;
   @Autowired private UserRepository userRepository;
   @Autowired private PasswordEncoder passwordEncoder;
-  @Autowired private DataInitializer dataInitializer;
 
   @BeforeEach
   void resetDatabase() throws Exception {
-    userRepository.deleteAll();
-    dataInitializer.run(new DefaultApplicationArguments(new String[0]));
+    clearDatabase();
+    initializeDefaults();
   }
 
   @Test
@@ -74,12 +71,20 @@ class SecurityIntegrationTest {
   }
 
   @Test
-  void rejectsInvalidAndMissingLoginCredentials() throws Exception {
+  void rejectsInvalidCredentials() throws Exception {
     assertUnauthorizedLogin("{\"username\":\"hexlet@example.com\",\"password\":\"wrong\"}");
     assertUnauthorizedLogin("{\"username\":\"unknown@example.com\",\"password\":\"qwerty\"}");
-    assertUnauthorizedLogin("{}");
-    assertUnauthorizedLogin("{\"username\":\"hexlet@example.com\"}");
-    assertUnauthorizedLogin("{\"password\":\"qwerty\"}");
+  }
+
+  @Test
+  void rejectsMalformedLoginRequests() throws Exception {
+    mockMvc.perform(post("/api/login")).andExpect(status().isBadRequest());
+    assertBadLogin("{}");
+    assertBadLogin("{\"username\":\"hexlet@example.com\"}");
+    assertBadLogin("{\"password\":\"qwerty\"}");
+    assertBadLogin("{\"username\":\"   \",\"password\":\"qwerty\"}");
+    assertBadLogin("{\"username\":\"invalid\",\"password\":\"qwerty\"}");
+    assertBadLogin("{\"username\":\"hexlet@example.com\",\"password\":\"   \"}");
   }
 
   @Test
@@ -199,6 +204,30 @@ class SecurityIntegrationTest {
   }
 
   @Test
+  void returnsNotFoundWhenUpdatingMissingUser() throws Exception {
+    var token = login("hexlet@example.com", "qwerty");
+
+    mockMvc
+        .perform(
+            put("/api/users/{id}", Long.MAX_VALUE)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstName\":\"Updated\"}"))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void returnsNotFoundWhenDeletingMissingUser() throws Exception {
+    var token = login("hexlet@example.com", "qwerty");
+
+    mockMvc
+        .perform(
+            delete("/api/users/{id}", Long.MAX_VALUE)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
   void keepsValidationForAuthenticatedRequests() throws Exception {
     var admin = userRepository.findByEmail("hexlet@example.com").orElseThrow();
     var token = login("hexlet@example.com", "qwerty");
@@ -235,6 +264,12 @@ class SecurityIntegrationTest {
     mockMvc
         .perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isUnauthorized());
+  }
+
+  private void assertBadLogin(String body) throws Exception {
+    mockMvc
+        .perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest());
   }
 
   private User saveUser(String email, String firstName, String lastName, String rawPassword) {

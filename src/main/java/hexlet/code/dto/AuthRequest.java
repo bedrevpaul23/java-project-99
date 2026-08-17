@@ -1,8 +1,12 @@
 package hexlet.code.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class AuthRequest {
-  private String username;
-  private String password;
+  @NotBlank @Email private String username;
+
+  @NotBlank private String password;
 
   public String getUsername() {
     return username;
