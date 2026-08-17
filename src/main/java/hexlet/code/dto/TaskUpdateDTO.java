@@ -1,7 +1,9 @@
 package hexlet.code.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.openapitools.jackson.nullable.JsonNullable;
 
@@ -14,7 +16,7 @@ public class TaskUpdateDTO {
   private JsonNullable<@NotBlank String> title = JsonNullable.undefined();
   private JsonNullable<String> content = JsonNullable.undefined();
   private JsonNullable<@NotBlank String> status = JsonNullable.undefined();
-  private JsonNullable<List<Long>> taskLabelIds = JsonNullable.undefined();
+  private JsonNullable<@Valid List<@NotNull Long>> taskLabelIds = JsonNullable.undefined();
 
   public JsonNullable<Integer> getIndex() {
     return index;

@@ -2,6 +2,7 @@ package hexlet.code.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public class TaskCreateDTO {
@@ -16,7 +17,7 @@ public class TaskCreateDTO {
 
   @NotBlank private String status;
 
-  private List<Long> taskLabelIds;
+  private List<@NotNull Long> taskLabelIds;
 
   public Integer getIndex() {
     return index;

@@ -551,6 +551,7 @@ class TaskControllerTest extends IntegrationTestSupport {
     assertBadPost("{\"title\":\"Task\"}");
     assertBadPost("{\"title\":\"Task\",\"status\":\"   \"}");
     assertBadPost("{\"title\":\"Task\",\"status\":null}");
+    assertBadPost("{\"title\":\"Task\",\"status\":\"draft\",\"taskLabelIds\":[null]}");
   }
 
   @Test
@@ -561,6 +562,7 @@ class TaskControllerTest extends IntegrationTestSupport {
     assertBadPut(task.getId(), "{\"title\":null}");
     assertBadPut(task.getId(), "{\"status\":\"   \"}");
     assertBadPut(task.getId(), "{\"status\":null}");
+    assertBadPut(task.getId(), "{\"taskLabelIds\":[null]}");
   }
 
   @Test

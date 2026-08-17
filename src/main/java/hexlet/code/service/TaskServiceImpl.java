@@ -15,6 +15,7 @@ import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import hexlet.code.specification.TaskSpecification;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -113,16 +114,21 @@ public class TaskServiceImpl implements TaskService {
   }
 
   private Set<Label> findLabelsByIds(List<Long> ids) {
-    var labels = new HashSet<Label>();
-    if (ids == null) {
-      return labels;
+    if (ids == null || ids.isEmpty()) {
+      return new HashSet<>();
     }
-    for (var id : ids) {
-      labels.add(
-          labelRepository
-              .findById(id)
-              .orElseThrow(() -> new ResourceNotFoundException("Label not found: " + id)));
+
+    var requestedIds = new HashSet<>(ids);
+    var labelsById = new HashMap<Long, Label>();
+    labelRepository
+        .findAllById(requestedIds)
+        .forEach(label -> labelsById.put(label.getId(), label));
+
+    for (var id : requestedIds) {
+      if (!labelsById.containsKey(id)) {
+        throw new ResourceNotFoundException("Label not found: " + id);
+      }
     }
-    return labels;
+    return new HashSet<>(labelsById.values());
   }
 }
