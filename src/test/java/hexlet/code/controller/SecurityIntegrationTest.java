@@ -72,13 +72,21 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
 
   @Test
   void rejectsInvalidCredentials() throws Exception {
-    assertUnauthorizedLogin("{\"username\":\"hexlet@example.com\",\"password\":\"wrong\"}");
-    assertUnauthorizedLogin("{\"username\":\"unknown@example.com\",\"password\":\"qwerty\"}");
+    var wrongPassword =
+        assertUnauthorizedLogin("{\"username\":\"hexlet@example.com\",\"password\":\"wrong\"}");
+    var unknownUser =
+        assertUnauthorizedLogin("{\"username\":\"unknown@example.com\",\"password\":\"qwerty\"}");
+
+    assertThat(wrongPassword).isEqualTo("{\"message\":\"Unauthorized\"}");
+    assertThat(unknownUser).isEqualTo(wrongPassword);
   }
 
   @Test
   void rejectsMalformedLoginRequests() throws Exception {
-    mockMvc.perform(post("/api/login")).andExpect(status().isBadRequest());
+    mockMvc
+        .perform(post("/api/login"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Invalid request body"));
     assertBadLogin("{}");
     assertBadLogin("{\"username\":\"hexlet@example.com\"}");
     assertBadLogin("{\"password\":\"qwerty\"}");
@@ -92,7 +100,10 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
     var admin = userRepository.findByEmail("hexlet@example.com").orElseThrow();
     var validUser = "{\"email\":\"new@example.com\",\"password\":\"secret\"}";
 
-    mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized());
+    mockMvc
+        .perform(get("/api/users"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.message").value("Unauthorized"));
     mockMvc.perform(get("/api/users/{id}", admin.getId())).andExpect(status().isUnauthorized());
     mockMvc
         .perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(validUser))
@@ -112,7 +123,8 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
   void rejectsMalformedBearerToken() throws Exception {
     mockMvc
         .perform(get("/api/users").header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.message").value("Unauthorized"));
   }
 
   @Test
@@ -167,7 +179,8 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"firstName\":\"Changed\"}"))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("Forbidden"));
 
     var unchanged = userRepository.findById(other.getId()).orElseThrow();
     assertThat(unchanged.getFirstName()).isEqualTo("Other");
@@ -198,7 +211,8 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
         .perform(
             delete("/api/users/{id}", other.getId())
                 .header(HttpHeaders.AUTHORIZATION, bearer(token)))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("Forbidden"));
 
     assertThat(userRepository.existsById(other.getId())).isTrue();
   }
@@ -260,16 +274,22 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
         .getContentAsString();
   }
 
-  private void assertUnauthorizedLogin(String body) throws Exception {
-    mockMvc
+  private String assertUnauthorizedLogin(String body) throws Exception {
+    return mockMvc
         .perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(body))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.message").value("Unauthorized"))
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
   }
 
   private void assertBadLogin(String body) throws Exception {
     mockMvc
         .perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(body))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").isNotEmpty())
+        .andExpect(jsonPath("$.errors").isArray());
   }
 
   private User saveUser(String email, String firstName, String lastName, String rawPassword) {

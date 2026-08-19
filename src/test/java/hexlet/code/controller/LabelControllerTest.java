@@ -145,7 +145,13 @@ class LabelControllerTest extends IntegrationTestSupport {
     var first = saveLabel("First " + UUID.randomUUID());
     var second = saveLabel("Second " + UUID.randomUUID());
 
-    assertBadPost(objectMapper.writeValueAsString(Map.of("name", first.getName())));
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("name", first.getName()))))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string("{\"message\":\"Data integrity violation\"}"));
     assertBadPut(second.getId(), objectMapper.writeValueAsString(Map.of("name", first.getName())));
     mockMvc
         .perform(

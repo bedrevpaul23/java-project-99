@@ -519,7 +519,8 @@ class TaskControllerTest extends IntegrationTestSupport {
             post(BASE_URL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"Unknown status\",\"status\":\"missing_status\"}"))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Task status not found: missing_status"));
     mockMvc
         .perform(
             post(BASE_URL)
@@ -528,7 +529,8 @@ class TaskControllerTest extends IntegrationTestSupport {
                     "{\"title\":\"Unknown user\",\"status\":\"draft\",\"assignee_id\":"
                         + missingUserId
                         + "}"))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("User not found: " + missingUserId));
     mockMvc
         .perform(
             put(BASE_URL + "/{id}", task.getId())
@@ -552,6 +554,35 @@ class TaskControllerTest extends IntegrationTestSupport {
     assertBadPost("{\"title\":\"Task\",\"status\":\"   \"}");
     assertBadPost("{\"title\":\"Task\",\"status\":null}");
     assertBadPost("{\"title\":\"Task\",\"status\":\"draft\",\"taskLabelIds\":[null]}");
+  }
+
+  @Test
+  void returnsDetailedValidationErrorsForTaskCreate() throws Exception {
+    mockMvc
+        .perform(
+            post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Task\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("status: must not be blank"))
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].field").value("status"))
+        .andExpect(jsonPath("$.errors[0].message").value("must not be blank"));
+
+    mockMvc
+        .perform(
+            post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"\",\"status\":\"\",\"taskLabelIds\":[null]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "status: must not be blank; taskLabelIds[0]: must not be null; "
+                        + "title: must not be blank"))
+        .andExpect(jsonPath("$.errors.length()").value(3))
+        .andExpect(jsonPath("$.errors[0].field").value("status"))
+        .andExpect(jsonPath("$.errors[1].field").value("taskLabelIds[0]"))
+        .andExpect(jsonPath("$.errors[1].message").value("must not be null"))
+        .andExpect(jsonPath("$.errors[2].field").value("title"));
   }
 
   @Test
@@ -595,7 +626,10 @@ class TaskControllerTest extends IntegrationTestSupport {
     var taskStatus = getStatus("draft");
     var task = saveTask("Linked user task", taskStatus, assignee);
 
-    mockMvc.perform(delete("/api/users/{id}", assignee.getId())).andExpect(status().isBadRequest());
+    mockMvc
+        .perform(delete("/api/users/{id}", assignee.getId()))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string("{\"message\":\"Data integrity violation\"}"));
 
     assertThat(userRepository.existsById(assignee.getId())).isTrue();
     assertThat(taskStatusRepository.existsById(taskStatus.getId())).isTrue();
@@ -614,7 +648,8 @@ class TaskControllerTest extends IntegrationTestSupport {
 
     mockMvc
         .perform(delete("/api/task_statuses/{id}", taskStatus.getId()))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string("{\"message\":\"Data integrity violation\"}"));
 
     assertThat(taskStatusRepository.existsById(taskStatus.getId())).isTrue();
     assertThat(taskRepository.findById(task.getId()))
@@ -749,14 +784,18 @@ class TaskControllerTest extends IntegrationTestSupport {
                     "{\"title\":\"Missing label\",\"status\":\"draft\",\"taskLabelIds\":["
                         + Long.MAX_VALUE
                         + "]}"))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Label not found: " + Long.MAX_VALUE));
     mockMvc
         .perform(
             put(BASE_URL + "/{id}", task.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"taskLabelIds\":[" + Long.MAX_VALUE + "]}"))
         .andExpect(status().isNotFound());
-    mockMvc.perform(delete("/api/labels/{id}", label.getId())).andExpect(status().isBadRequest());
+    mockMvc
+        .perform(delete("/api/labels/{id}", label.getId()))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string("{\"message\":\"Data integrity violation\"}"));
 
     assertThat(labelRepository.existsById(label.getId())).isTrue();
     assertThat(taskRepository.findById(task.getId()).orElseThrow().getLabels())
