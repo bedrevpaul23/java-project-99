@@ -17,6 +17,8 @@ Task Manager — веб-приложение для управления зад�
 
 Приложение размещено на Render. После периода неактивности первый запуск может занять некоторое время.
 
+Доступ к Render и размещённому приложению может быть ограничен из некоторых сетей, в том числе из российского интернета. Если сайт не открывается или соединение завершается по таймауту, попробуйте использовать VPN.
+
 Для входа можно использовать заранее созданную учебную тестовую учётную запись:
 
 - Электронная почта: `hexlet@example.com`
@@ -240,6 +242,8 @@ Task Manager is a web application for managing tasks, users, task statuses, and 
 The application is available at [java-project-99-frxd.onrender.com](https://java-project-99-frxd.onrender.com).
 
 The application is hosted on Render. After a period of inactivity, the first start may take some time.
+
+Access to Render and the deployed application may be restricted from some networks, including networks in Russia. If the site does not open or the connection times out, try using a VPN.
 
 Use the seeded educational demo account:
 
