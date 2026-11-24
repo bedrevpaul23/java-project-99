@@ -13,17 +13,17 @@
 
 - JWT и данные текущего пользователя перенесены из постоянного хранилища в `sessionStorage`, пароль больше не сохраняется в браузере, а выход полностью очищает сессию;
 - API пользователей не возвращает пароли или их хеши; изменение и удаление чужой учётной записи блокируется ответом `403 Forbidden`, при этом просмотр профиля оставлен доступным для корректной работы интерфейса;
-- добавлена Content Security Policy, отключена отправка персональных данных в Sentry, Docker-контейнер запускается от непривилегированного пользователя и не навязывает профиль без настроенной базы данных;
+- добавлена Content Security Policy и отключена отправка персональных данных в Sentry; конфигурация запуска Docker возвращена к последней проверенной рабочей версии;
 - восстановлена совместная работа фильтров задач и зафиксирована воспроизводимая сборка frontend;
-- CI теперь пересобирает и проверяет опубликованный frontend, контролирует безопасную конфигурацию Docker, запускает Java-тесты, Spotless и сборку JAR; `Build` и `Hexlet Check` проходят успешно.
+- CI теперь пересобирает и проверяет опубликованный frontend, запускает Java-тесты, Spotless и сборку JAR; `Build` и `Hexlet Check` проходят успешно.
 
 The project is actively maintained. The latest update:
 
 - moved the JWT and current-user data from persistent storage to `sessionStorage`, stopped storing the password in the browser, and made sign-out clear the complete session;
 - ensured the user API never returns passwords or password hashes; attempts to update or delete another account receive `403 Forbidden`, while profile reads remain available for the UI flow;
-- added a Content Security Policy, disabled PII reporting to Sentry, and made the Docker container run as an unprivileged user without forcing a profile before its database is configured;
+- added a Content Security Policy, disabled PII reporting to Sentry, and restored the Docker startup configuration to the last verified working version;
 - restored combined task filters and pinned a reproducible frontend build;
-- made CI rebuild and validate the published frontend, verify the safe Docker runtime configuration, run Java tests and Spotless, and build the JAR; both `Build` and `Hexlet Check` pass.
+- made CI rebuild and validate the published frontend, run Java tests and Spotless, and build the JAR; both `Build` and `Hexlet Check` pass.
 
 # Русский
 
@@ -244,8 +244,6 @@ node scripts/check-frontend.mjs
 ```text
 SPRING_PROFILES_ACTIVE=prod
 ```
-
-Docker-образ не задаёт профиль принудительно. Если `SPRING_PROFILES_ACTIVE` не указан, приложение использует профиль `dev` и H2; это позволяет запустить демонстрационный экземпляр без внешней базы данных. Для постоянного хранения данных включайте `prod` только вместе со всеми обязательными параметрами PostgreSQL.
 
 Секретные значения передаются приложению через переменные окружения и не хранятся в репозитории.
 
@@ -505,8 +503,6 @@ For production, set:
 ```text
 SPRING_PROFILES_ACTIVE=prod
 ```
-
-The Docker image does not force a Spring profile. If `SPRING_PROFILES_ACTIVE` is unset, the application uses the `dev` profile and H2, allowing a demo instance to start without an external database. Enable `prod` for persistent storage only when all required PostgreSQL settings are supplied.
 
 Secret values are supplied through environment variables and are not stored in the repository.
 
