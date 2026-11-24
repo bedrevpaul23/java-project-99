@@ -17,5 +17,16 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build published frontend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/build-secure-frontend.mjs
+          git diff --exit-code -- src/main/resources/static
+      - name: Check published frontend credentials
+        run: node scripts/check-frontend.mjs
       - name: Check project
         run: ./gradlew clean check spotlessCheck bootJar

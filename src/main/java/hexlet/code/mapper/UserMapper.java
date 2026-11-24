@@ -11,6 +11,7 @@ public class UserMapper {
   public UserDTO map(User user) {
     var dto = new UserDTO();
     dto.setId(user.getId());
+    dto.setDisplayName("User #" + user.getId());
     dto.setEmail(user.getEmail());
     dto.setFirstName(user.getFirstName());
     dto.setLastName(user.getLastName());

@@ -21,5 +21,8 @@ RUN ./gradlew bootJar -x test --no-daemon
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
+RUN groupadd --system app && useradd --system --gid app app
+USER app
+ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080
-CMD ["sh", "-c", "java -jar app.jar --server.port=${PORT:-8080}"]
+CMD ["java", "-jar", "app.jar"]

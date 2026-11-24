@@ -42,6 +42,14 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
+        .headers(
+            headers ->
+                headers.contentSecurityPolicy(
+                    csp ->
+                        csp.policyDirectives(
+                            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                                + "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; "
+                                + "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'")))
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
