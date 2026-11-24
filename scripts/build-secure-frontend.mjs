@@ -22,12 +22,13 @@ function patchFile(relativePath, replacements) {
 }
 
 patchFile('src/authProvider.ts', [
-  ['localStorage.setItem("token", response.data)', 'sessionStorage.setItem("token", response.data)'],
+  ['localStorage.setItem("token", response.data)', 'sessionStorage.setItem("token", response.data);\n    localStorage.setItem("authSession", "active")'],
   ['JSON.stringify({ username, password })', 'JSON.stringify({ username })'],
   ['localStorage.setItem("user", userNameData)', 'sessionStorage.setItem("user", userNameData)'],
-  ['localStorage.removeItem("token")', 'sessionStorage.removeItem("token")'],
+  ['localStorage.removeItem("token")', 'sessionStorage.removeItem("token");\n    sessionStorage.removeItem("user");\n    localStorage.removeItem("authSession")'],
   ['localStorage.getItem("token")', 'sessionStorage.getItem("token")'],
   ['localStorage.getItem("user")', 'sessionStorage.getItem("user")'],
+  ['if (!token) {\n      throw new Error("Token not found");\n    }', 'if (!token || localStorage.getItem("authSession") !== "active") {\n      sessionStorage.removeItem("token");\n      sessionStorage.removeItem("user");\n      throw new Error("Token not found");\n    }'],
   ['status === 401 || status === 403', 'status === 401'],
 ]);
 patchFile('src/dataProvider.ts', [
