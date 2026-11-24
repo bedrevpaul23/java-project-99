@@ -1,9 +1,17 @@
 # Task Manager
 
-[![Actions Status](https://github.com/bedrevpaul23/java-project-99/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/bedrevpaul23/java-project-99/actions)
+[![Hexlet Check](https://github.com/bedrevpaul23/java-project-99/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/bedrevpaul23/java-project-99/actions/workflows/hexlet-check.yml)
 [![Build](https://github.com/bedrevpaul23/java-project-99/actions/workflows/build.yml/badge.svg)](https://github.com/bedrevpaul23/java-project-99/actions/workflows/build.yml)
 
 [Русский](#Русский) · [English](#English)
+
+## Статус проекта / Project status
+
+**Последнее обновление / Last update: 24 ноября 2026 / November 24, 2026**
+
+Проект активно поддерживается. В последнем обновлении усилена защита JWT-сессии, восстановлен корректный сценарий редактирования пользователей, исправлена фильтрация задач и подтверждено прохождение `Build` и `Hexlet Check`.
+
+The project is actively maintained. The latest update hardened JWT session handling, restored the correct user editing flow, fixed task filtering, and passed both `Build` and `Hexlet Check`.
 
 # Русский
 
@@ -66,7 +74,7 @@ Task Manager — веб-приложение для управления зад�
 
 ### Пользователи
 
-В разделе пользователей можно просматривать список пользователей и создавать новые учётные записи. Пользователь может редактировать и удалять только собственную учётную запись. Удаление невозможно, если пользователь назначен исполнителем существующей задачи.
+В разделе пользователей можно просматривать список и профили пользователей, а также создавать новые учётные записи. Пароли и их хеши никогда не возвращаются API. Пользователь может редактировать и удалять только собственную учётную запись. Удаление невозможно, если пользователь назначен исполнителем существующей задачи.
 
 ### Статусы задач
 
@@ -92,6 +100,8 @@ Task Manager — веб-приложение для управления зад�
 ### Аутентификация
 
 Защищённые разделы приложения требуют входа. После успешной аутентификации веб-интерфейс получает JWT через `POST /api/login` и использует его для обращения к защищённым API.
+
+JWT хранится только в `sessionStorage` текущей вкладки и удаляется при выходе. Сервер дополнительно проверяет владельца при изменении и удалении пользователя, а браузерные ответы защищены политикой Content Security Policy.
 
 ## API
 
@@ -154,6 +164,11 @@ cd java-project-99
 - Пароль: `qwerty`
 
 ## Тесты и проверки
+
+Каждый push проверяется двумя workflow GitHub Actions:
+
+- `Build` воспроизводимо собирает опубликованный frontend, проверяет отсутствие учётных данных в постоянном хранилище браузера, запускает Java-тесты, Spotless и сборку исполняемого JAR;
+- `Hexlet Check` запускает сквозные браузерные сценарии для аутентификации, пользователей, статусов, меток, задач и фильтрации.
 
 Для запуска автоматических проверок:
 
@@ -292,7 +307,7 @@ Multiple filters can be applied at the same time.
 
 ### Users
 
-The Users section lets you view users and create new accounts. A user can edit and delete only their own account. An account cannot be deleted while that user is assigned to an existing task.
+The Users section lets you view the user directory and individual profiles, and create new accounts. Passwords and password hashes are never returned by the API. A user can edit and delete only their own account. An account cannot be deleted while that user is assigned to an existing task.
 
 ### Task statuses
 
@@ -318,6 +333,8 @@ The following labels are created when the application starts:
 ### Authentication
 
 Protected sections require sign-in. After successful authentication, the browser UI receives a JWT through `POST /api/login` and uses it to access protected APIs.
+
+The JWT is kept only in the current tab's `sessionStorage` and is removed on sign-out. The server also verifies ownership when a user account is updated or deleted, and browser responses are protected by a Content Security Policy.
 
 ## API documentation
 
@@ -380,6 +397,11 @@ Use the demo account to sign in:
 - Password: `qwerty`
 
 ## Tests and quality checks
+
+Every push is verified by two GitHub Actions workflows:
+
+- `Build` reproducibly builds the published frontend, checks that credentials cannot persist in browser storage, runs the Java tests and Spotless, and builds the executable JAR;
+- `Hexlet Check` runs end-to-end browser scenarios covering authentication, users, task statuses, labels, tasks, and filtering.
 
 Run the automated checks:
 
