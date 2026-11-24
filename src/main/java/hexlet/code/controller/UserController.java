@@ -34,7 +34,6 @@ public class UserController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("@userAccess.isOwner(#id, authentication)")
   public UserDTO show(@PathVariable Long id) {
     return userService.getById(id);
   }
