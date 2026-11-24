@@ -3,15 +3,27 @@
 [![Hexlet Check](https://github.com/bedrevpaul23/java-project-99/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/bedrevpaul23/java-project-99/actions/workflows/hexlet-check.yml)
 [![Build](https://github.com/bedrevpaul23/java-project-99/actions/workflows/build.yml/badge.svg)](https://github.com/bedrevpaul23/java-project-99/actions/workflows/build.yml)
 
-[Русский](#Русский) · [English](#English)
+[Русский](#русский) · [English](#english)
 
 ## Статус проекта / Project status
 
 **Последнее обновление / Last update: 24 ноября 2026 / November 24, 2026**
 
-Проект активно поддерживается. В последнем обновлении усилена защита JWT-сессии, восстановлен корректный сценарий редактирования пользователей, исправлена фильтрация задач и подтверждено прохождение `Build` и `Hexlet Check`.
+Проект активно поддерживается. В последнем обновлении:
 
-The project is actively maintained. The latest update hardened JWT session handling, restored the correct user editing flow, fixed task filtering, and passed both `Build` and `Hexlet Check`.
+- JWT и данные текущего пользователя перенесены из постоянного хранилища в `sessionStorage`, пароль больше не сохраняется в браузере, а выход полностью очищает сессию;
+- API пользователей не возвращает пароли или их хеши; изменение и удаление чужой учётной записи блокируется ответом `403 Forbidden`, при этом просмотр профиля оставлен доступным для корректной работы интерфейса;
+- добавлена Content Security Policy, отключена отправка персональных данных в Sentry, Docker-контейнер запускается от непривилегированного пользователя;
+- восстановлена совместная работа фильтров задач и зафиксирована воспроизводимая сборка frontend;
+- CI теперь пересобирает и проверяет опубликованный frontend, запускает Java-тесты, Spotless и сборку JAR; `Build` и `Hexlet Check` проходят успешно.
+
+The project is actively maintained. The latest update:
+
+- moved the JWT and current-user data from persistent storage to `sessionStorage`, stopped storing the password in the browser, and made sign-out clear the complete session;
+- ensured the user API never returns passwords or password hashes; attempts to update or delete another account receive `403 Forbidden`, while profile reads remain available for the UI flow;
+- added a Content Security Policy, disabled PII reporting to Sentry, and made the Docker container run as an unprivileged user;
+- restored combined task filters and pinned a reproducible frontend build;
+- made CI rebuild and validate the published frontend, run Java tests and Spotless, and build the JAR; both `Build` and `Hexlet Check` pass.
 
 # Русский
 
@@ -65,7 +77,7 @@ Task Manager — веб-приложение для управления зад�
 
 В верхней части списка задач доступны фильтры:
 
-- `Title cont` — поиск по части названия задачи;
+- `Title` — поиск по части названия задачи;
 - `Assignee` — фильтрация по назначенному исполнителю;
 - `Status` — фильтрация по статусу;
 - `Label` — фильтрация по метке.
@@ -101,7 +113,7 @@ Task Manager — веб-приложение для управления зад�
 
 Защищённые разделы приложения требуют входа. После успешной аутентификации веб-интерфейс получает JWT через `POST /api/login` и использует его для обращения к защищённым API.
 
-JWT хранится только в `sessionStorage` текущей вкладки и удаляется при выходе. Сервер дополнительно проверяет владельца при изменении и удалении пользователя, а браузерные ответы защищены политикой Content Security Policy.
+JWT и данные текущего пользователя хранятся только в `sessionStorage` текущей вкладки и удаляются при выходе или закрытии вкладки. В `localStorage` остаётся только несекретный признак активной сессии. Сервер дополнительно проверяет владельца при изменении и удалении пользователя, а браузерные ответы защищены политикой Content Security Policy.
 
 ## API
 
@@ -125,14 +137,14 @@ JWT хранится только в `sessionStorage` текущей вклад�
 ## Технологии
 
 - Java 21
-- Spring Boot 3.4
+- Spring Boot 3.4.5
 - Spring MVC
 - Spring Data JPA / Hibernate
 - Spring Security
 - JWT / OAuth2 Resource Server
 - PostgreSQL
 - H2
-- Gradle
+- Gradle 9.6
 - Springdoc OpenAPI / Swagger UI
 - Sentry
 - Docker
@@ -142,7 +154,7 @@ JWT хранится только в `sessionStorage` текущей вклад�
 
 ## Локальный запуск
 
-Для локального запуска требуется JDK 21.
+Для локального запуска требуется JDK 21. Node.js 24 нужен только для пересборки браузерного интерфейса.
 
 Клонируйте репозиторий и запустите приложение:
 
@@ -163,11 +175,32 @@ cd java-project-99
 - Электронная почта: `hexlet@example.com`
 - Пароль: `qwerty`
 
+Альтернативный запуск через Makefile:
+
+```bash
+make setup
+make start
+```
+
+`make setup` собирает приложение, а `make start` запускает собранный JAR.
+
+## Пересборка frontend
+
+Готовый frontend хранится в `src/main/resources/static/` и публикуется вместе со Spring Boot-приложением. После изменения версии frontend или защитных преобразований пересоберите и проверьте bundle:
+
+```bash
+npm ci --ignore-scripts --no-audit --no-fund
+node scripts/build-secure-frontend.mjs
+node scripts/check-frontend.mjs
+```
+
+Скрипт сборки применяет проектные исправления к пакету `@hexlet/java-task-manager-frontend`, создаёт новый bundle и обновляет ссылку на него в `index.html`. Проверка предотвращает возврат хранения JWT, данных пользователя или пароля в постоянное хранилище и контролирует совместимость фильтров и списка пользователей.
+
 ## Тесты и проверки
 
 Каждый push проверяется двумя workflow GitHub Actions:
 
-- `Build` воспроизводимо собирает опубликованный frontend, проверяет отсутствие учётных данных в постоянном хранилище браузера, запускает Java-тесты, Spotless и сборку исполняемого JAR;
+- `Build` воспроизводимо собирает опубликованный frontend, проверяет отсутствие JWT, данных пользователя и пароля в постоянном хранилище браузера, запускает Java-тесты, Spotless и сборку исполняемого JAR;
 - `Hexlet Check` запускает сквозные браузерные сценарии для аутентификации, пользователей, статусов, меток, задач и фильтрации.
 
 Для запуска автоматических проверок:
@@ -194,9 +227,10 @@ cd java-project-99
 
 | Переменная | Назначение |
 | --- | --- |
+| `PORT` | HTTP-порт приложения. По умолчанию используется `8080`. |
 | `SPRING_PROFILES_ACTIVE` | Активный профиль Spring. Для рабочего окружения используется значение `prod`. |
 | `DB_HOST` | Адрес сервера PostgreSQL. |
-| `DB_PORT` | Порт PostgreSQL. |
+| `DB_PORT` | Порт PostgreSQL. По умолчанию используется `5432`. |
 | `DB_NAME` | Имя базы данных PostgreSQL. |
 | `DB_USER` | Пользователь PostgreSQL. |
 | `DB_PASSWORD` | Пароль пользователя PostgreSQL. |
@@ -225,6 +259,7 @@ SPRING_PROFILES_ACTIVE=prod
 
 ```text
 src/main/java/hexlet/code/
+  component/
   config/
   controller/
   dto/
@@ -232,6 +267,7 @@ src/main/java/hexlet/code/
   mapper/
   model/
   repository/
+  security/
   service/
   specification/
 ```
@@ -243,6 +279,8 @@ src/main/resources/
   static/
   application*.yml
 ```
+
+Скрипты сборки frontend находятся в `scripts/`, а конфигурация CI — в `.github/workflows/`.
 
 ---
 
@@ -298,7 +336,7 @@ When creating or editing a task, you can:
 
 Filters are available at the top of the task list:
 
-- `Title cont` — searches for part of a task title;
+- `Title` — searches for part of a task title;
 - `Assignee` — filters by the assigned user;
 - `Status` — filters by task status;
 - `Label` — filters by label.
@@ -334,7 +372,7 @@ The following labels are created when the application starts:
 
 Protected sections require sign-in. After successful authentication, the browser UI receives a JWT through `POST /api/login` and uses it to access protected APIs.
 
-The JWT is kept only in the current tab's `sessionStorage` and is removed on sign-out. The server also verifies ownership when a user account is updated or deleted, and browser responses are protected by a Content Security Policy.
+The JWT and current-user data are kept only in the current tab's `sessionStorage` and are removed on sign-out or when the tab is closed. Only a non-secret active-session marker remains in `localStorage`. The server also verifies ownership when a user account is updated or deleted, and browser responses are protected by a Content Security Policy.
 
 ## API documentation
 
@@ -358,14 +396,14 @@ Swagger UI contains the full list of operations, request parameters, and data sc
 ## Tech stack
 
 - Java 21
-- Spring Boot 3.4
+- Spring Boot 3.4.5
 - Spring MVC
 - Spring Data JPA / Hibernate
 - Spring Security
 - JWT / OAuth2 Resource Server
 - PostgreSQL
 - H2
-- Gradle
+- Gradle 9.6
 - Springdoc OpenAPI / Swagger UI
 - Sentry
 - Docker
@@ -375,7 +413,7 @@ Swagger UI contains the full list of operations, request parameters, and data sc
 
 ## Local development
 
-JDK 21 is required.
+JDK 21 is required. Node.js 24 is needed only when rebuilding the browser UI.
 
 Clone the repository and start the application:
 
@@ -396,11 +434,32 @@ Use the demo account to sign in:
 - Email: `hexlet@example.com`
 - Password: `qwerty`
 
+Alternatively, use the Makefile:
+
+```bash
+make setup
+make start
+```
+
+`make setup` builds the application, and `make start` runs the assembled JAR.
+
+## Rebuilding the frontend
+
+The built frontend is stored in `src/main/resources/static/` and is shipped with the Spring Boot application. After changing the frontend version or the security transformations, rebuild and verify the bundle:
+
+```bash
+npm ci --ignore-scripts --no-audit --no-fund
+node scripts/build-secure-frontend.mjs
+node scripts/check-frontend.mjs
+```
+
+The build script applies the project's fixes to `@hexlet/java-task-manager-frontend`, creates a new bundle, and updates its reference in `index.html`. The verification script prevents JWTs, user data, or passwords from returning to persistent storage and checks task-filter and user-directory compatibility.
+
 ## Tests and quality checks
 
 Every push is verified by two GitHub Actions workflows:
 
-- `Build` reproducibly builds the published frontend, checks that credentials cannot persist in browser storage, runs the Java tests and Spotless, and builds the executable JAR;
+- `Build` reproducibly builds the published frontend, checks that JWTs, user data, and passwords cannot persist in browser storage, runs the Java tests and Spotless, and builds the executable JAR;
 - `Hexlet Check` runs end-to-end browser scenarios covering authentication, users, task statuses, labels, tasks, and filtering.
 
 Run the automated checks:
@@ -427,9 +486,10 @@ Configure the following environment variables for production:
 
 | Variable | Purpose |
 | --- | --- |
+| `PORT` | Application HTTP port. Defaults to `8080`. |
 | `SPRING_PROFILES_ACTIVE` | Active Spring profile. Use `prod` in production. |
 | `DB_HOST` | PostgreSQL host. |
-| `DB_PORT` | PostgreSQL port. |
+| `DB_PORT` | PostgreSQL port. Defaults to `5432`. |
 | `DB_NAME` | PostgreSQL database name. |
 | `DB_USER` | PostgreSQL user. |
 | `DB_PASSWORD` | PostgreSQL password. |
@@ -458,6 +518,7 @@ The main backend code is located in `src/main/java/hexlet/code/`:
 
 ```text
 src/main/java/hexlet/code/
+  component/
   config/
   controller/
   dto/
@@ -465,6 +526,7 @@ src/main/java/hexlet/code/
   mapper/
   model/
   repository/
+  security/
   service/
   specification/
 ```
@@ -476,3 +538,5 @@ src/main/resources/
   static/
   application*.yml
 ```
+
+Frontend build scripts are located in `scripts/`, and CI configuration is located in `.github/workflows/`.
