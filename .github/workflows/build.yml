@@ -28,5 +28,12 @@ jobs:
           git diff --exit-code -- src/main/resources/static
       - name: Check published frontend credentials
         run: node scripts/check-frontend.mjs
+      - name: Check Docker runtime configuration
+        run: |
+          grep -q '^USER app$' Dockerfile
+          if grep -q '^ENV SPRING_PROFILES_ACTIVE=' Dockerfile; then
+            echo 'Docker image must not force an environment-specific Spring profile'
+            exit 1
+          fi
       - name: Check project
         run: ./gradlew clean check spotlessCheck bootJar
