@@ -188,7 +188,7 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
   }
 
   @Test
-  void hidesOtherProfilesFromDirectoryAndDetail() throws Exception {
+  void exposesAuthenticatedDirectoryButProtectsOtherProfileDetails() throws Exception {
     var owner = saveUser("owner@example.com", "Owner", "User", "secret");
     var other = saveUser("other@example.com", "Other", "User", "secret");
     var token = login(owner.getEmail(), "secret");
@@ -196,8 +196,11 @@ class SecurityIntegrationTest extends IntegrationTestSupport {
     mockMvc
         .perform(get("/api/users").header(HttpHeaders.AUTHORIZATION, bearer(token)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[?(@.id == " + other.getId() + ")].email").doesNotExist())
-        .andExpect(jsonPath("$[?(@.id == " + other.getId() + ")].displayName").isNotEmpty());
+        .andExpect(
+            jsonPath("$[?(@.id == " + other.getId() + ")].email")
+                .value(org.hamcrest.Matchers.contains("other@example.com")))
+        .andExpect(jsonPath("$[?(@.id == " + other.getId() + ")].password").doesNotExist())
+        .andExpect(jsonPath("$[?(@.id == " + other.getId() + ")].passwordDigest").doesNotExist());
     mockMvc
         .perform(
             get("/api/users/{id}", other.getId()).header(HttpHeaders.AUTHORIZATION, bearer(token)))

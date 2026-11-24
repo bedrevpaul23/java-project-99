@@ -33,13 +33,6 @@ patchFile('src/authProvider.ts', [
 patchFile('src/dataProvider.ts', [
   ['localStorage.getItem("token")', 'sessionStorage.getItem("token")'],
 ]);
-patchFile('src/App.tsx', [
-  ['recordRepresentation="email"', 'recordRepresentation="displayName"'],
-]);
-patchFile('src/components/users.tsx', [
-  ['<Datagrid rowClick="edit">\n      <TextField source="id" />\n      <TextField source="email" />\n      <TextField source="firstName" />\n      <TextField source="lastName" />\n      <DateField source="createdAt" showTime />\n    </Datagrid>',
-    '<Datagrid rowClick={(_id, _resource, record) => record.email ? "edit" : false}>\n      <TextField source="id" />\n      <TextField source="displayName" />\n    </Datagrid>'],
-]);
 patchFile('src/main.tsx', [
   ['import React from "react";', 'localStorage.removeItem("user");\nlocalStorage.removeItem("token");\nimport React from "react";'],
 ]);

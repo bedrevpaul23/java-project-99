@@ -6,11 +6,9 @@ import hexlet.code.dto.UserUpdateDTO;
 import hexlet.code.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,18 +28,8 @@ public class UserController {
   }
 
   @GetMapping
-  public ResponseEntity<List<?>> index(Authentication authentication) {
-    var users =
-        userService.getAll().stream()
-            .map(
-                user -> {
-                  if (!user.getEmail().equals(authentication.getName())) {
-                    return (Object)
-                        Map.of("id", user.getId(), "displayName", user.getDisplayName());
-                  }
-                  return (Object) user;
-                })
-            .toList();
+  public ResponseEntity<List<UserDTO>> index() {
+    var users = userService.getAll();
     return ResponseEntity.ok().header("X-Total-Count", String.valueOf(users.size())).body(users);
   }
 

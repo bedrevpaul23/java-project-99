@@ -15,13 +15,17 @@ if (!/sessionStorage\.setItem\(["'`]token["'`]/.test(bundle)
   throw new Error('Published frontend can persist credentials in localStorage');
 }
 
-const users = readFileSync(resolve('node_modules/@hexlet/java-task-manager-frontend/src/components/users.tsx'), 'utf8');
+const app = readFileSync(
+  resolve('node_modules/@hexlet/java-task-manager-frontend/src/App.tsx'),
+  'utf8',
+);
+const users = readFileSync(
+  resolve('node_modules/@hexlet/java-task-manager-frontend/src/components/users.tsx'),
+  'utf8',
+);
 const list = users.split('export const UserList = () => (')[1]?.split('export const UserShow = () => (')[0];
-const show = users.split('export const UserShow = () => (')[1];
-if (!list?.includes('record.email ? "edit" : false')
-    || !list.includes('source="displayName"')
-    || !show?.includes('source="email"')
-    || !show.includes('source="firstName"')
-    || !show.includes('source="lastName"')) {
-  throw new Error('The user directory or owner profile has regressed');
+if (!app.includes('recordRepresentation="email"')
+    || !list?.includes('<Datagrid rowClick="edit">')
+    || !list.includes('source="email"')) {
+  throw new Error('The authenticated user directory is incompatible with task assignment');
 }
